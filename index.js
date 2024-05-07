@@ -247,14 +247,16 @@ function record() {
             
         updateImagesDiv();
 
-        setTimeout(record, 250);
+        setTimeout(record, 10);
     }
 }
 
 
 function savePredictionsAsZip(predictions, names) {
-    console.log(predictions)
     predictions = predictions.sort(() => Math.random() - 0.5);
+
+    console.log(JSON.stringify(predictions));
+    console.log(JSON.stringify(names));
 
     const trainSize = parseInt(predictions.length * trainPercentile);
     const validSize = parseInt(predictions.length * validPercentile);
@@ -262,12 +264,14 @@ function savePredictionsAsZip(predictions, names) {
     const train = predictions.splice(0, trainSize);
     const valid = predictions.splice(trainSize, trainSize + validSize);
     const test = predictions.splice(trainSize + validSize);
+
+    console.log(train)
 }
 
 async function makePredictions() {
     const names = [];
-    const predictions = [];
-    const model = await cocoSsd.load();
+    let predictions = [];
+    const model = await cocoSsd.load({base: 'mobilenet_v2'});
     const detectionPromises = [];
 
     for (let index in objects) {
@@ -279,7 +283,6 @@ async function makePredictions() {
             // scale the image to a capable resolution for the SSD model
             tImg.width = 640;
             tImg.height = 480;
-
             //initilize a model detection promise for an image
             const detectionPromise = model.detect(tImg)
                 .then((result) => {
@@ -288,9 +291,9 @@ async function makePredictions() {
                             if (p['class'] == objects[index]['Type']) {
                                 predictions.push({
                                     'bbox': p['bbox'],
-                                    'Name': index
+                                    'Name': index,
+                                    'Image': img
                                 });
-                                console.log(p, predictions);
                             }
                         }
                     }
