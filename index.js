@@ -101,6 +101,10 @@ let recording = false;
 let currentImages = [];
 let objects = [];
 
+const trainPercentile = 0.7;
+const validPercentile = 0.2;
+//test percentile is all thats left obviously
+
 const wc = new WebCam();
 
 function getName() {
@@ -115,7 +119,19 @@ function getName() {
             confirmButtonText: "Submit",
             showLoaderOnConfirm: true
         }).then((Name) => {
-            resolve(Name.value);
+            if (Name.value != '' && Name.value != undefined) {
+                resolve(Name.value);
+            }
+            else {
+                Swal.fire({
+                    position: "center",
+                    icon: "error",
+                    title: "Invalid Name",
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+                reject('Invalid Name');
+            }
         }).catch((err) => {
             reject(err);
         })
@@ -142,7 +158,6 @@ function getType() {
                     position: "center",
                     icon: "error",
                     title: "Invalid Type",
-                    // text: `${Type.value} is not a valid COCO label`,
                     footer: '<a href="https://gist.github.com/aallan/fbdf008cffd1e08a619ad11a02b74fa8">Supported Types</a>',
                     showConfirmButton: false,
                     timer: 1500
@@ -236,6 +251,65 @@ function record() {
     }
 }
 
+
+function savePredictionsAsZip(predictions, names) {
+    console.log(predictions)
+    predictions = predictions.sort(() => Math.random() - 0.5);
+
+    const trainSize = parseInt(predictions.length * trainPercentile);
+    const validSize = parseInt(predictions.length * validPercentile);
+
+    const train = predictions.splice(0, trainSize);
+    const valid = predictions.splice(trainSize, trainSize + validSize);
+    const test = predictions.splice(trainSize + validSize);
+}
+
+async function makePredictions() {
+    const names = [];
+    const predictions = [];
+    const model = await cocoSsd.load();
+    const detectionPromises = [];
+
+    for (let index in objects) {
+        names.push(objects[index]['Name']);
+        for (let img of objects[index]['Images']) {
+            const tImg = new Image();
+            tImg.crossOrigin = 'anonymous';
+            tImg.src = img;
+            // scale the image to a capable resolution for the SSD model
+            tImg.width = 640;
+            tImg.height = 480;
+
+            //initilize a model detection promise for an image
+            const detectionPromise = model.detect(tImg)
+                .then((result) => {
+                    if (result.length > 0) {
+                        for (let p of result) {
+                            if (p['class'] == objects[index]['Type']) {
+                                predictions.push({
+                                    'bbox': p['bbox'],
+                                    'Name': index
+                                });
+                                console.log(p, predictions);
+                            }
+                        }
+                    }
+                })
+                .catch(err => console.error(err));
+
+            //append that promise
+            detectionPromises.push(detectionPromise);
+        }
+    }
+
+    // Wait for all detection promises to resolve
+    await Promise.all(detectionPromises).then(() => {
+        savePredictionsAsZip(predictions, names);
+        objects = [];
+        document.getElementById('objectsDiv').innerHTML = '';
+    })
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const webCamVideo = document.getElementById('webCamVideo');
 
@@ -264,6 +338,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     saveButton.addEventListener('click', () => {
+        if (currentImages.length <= 0) {
+            return Swal.fire({
+                position: "center",
+                icon: "error",
+                title: "Can't save no images bro",
+                showConfirmButton: false,
+                timer: 1500
+            });
+        }
+
         recording = false;
         webCamVideo.pause();
 
@@ -273,7 +357,24 @@ document.addEventListener('DOMContentLoaded', () => {
         updateObjectsDiv();
     });
 
-    downloadButton.addEventListener('click', () => {
+    downloadButton.addEventListener('click', async () => {
+        if (objects.length > 0) {
+            recording = false;
+            webCamVideo.pause();
 
+            recordButton.innerText = 'Click to record';
+            recordButton.style.backgroundColor = 'white';
+
+            await makePredictions();
+        }
+        else {
+            Swal.fire({
+                position: "center",
+                icon: "error",
+                title: "Can't download without any annotated objects",
+                showConfirmButton: true,
+                timer: 1250
+            });
+        }
     });
 });
