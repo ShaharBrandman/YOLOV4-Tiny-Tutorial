@@ -24,24 +24,26 @@ def saveInFolder(dataset, path):
     os.makedirs(f'dataset/{path}', exist_ok=True)
 
     for index, obj in enumerate(dataset):
-        if len(obj) > 1:
-            cv2.imwrite(f'dataset/{path}/{path}-{index}.jpg', obj[0]['Image'])
+        cv2.imwrite(f'dataset/{path}/{path}-{index}.jpg', obj['Image'])
 
-            if os.path.exists(f'dataset/{path}/{path}-{index}.txt'):
-                os.remove(f'dataset/{path}/{path}-{index}.txt')
+        if os.path.exists(f'dataset/{path}/{path}-{index}.txt'):
+            os.remove(f'dataset/{path}/{path}-{index}.txt')
 
-            with open(f'dataset/{path}/{path}-{index}.txt', 'a') as f:
-                for j in range(1, len(obj)):
-                    f.write(f"{obj[j]['classId']} {obj[j]['x']} {obj[j]['y']} {obj[j]['w']} {obj[j]['h']}\n")
-def saveObjects():
+        with open(f'dataset/{path}/{path}-{index}.txt', 'a') as f:
+            for annotation in obj['bbox']:
+                f.write(f"{annotation['classId']} {annotation['x']} {annotation['y']} {annotation['w']} {annotation['h']}\n")
+def saveObjects(arr):
     #shuffle the array
-    np.random.shuffle(blobs)
+    np.random.shuffle(arr)
     
-    train = blobs[:int(len(blobs) * TRAIN_PERCENTILE)]
-    valid = blobs[int(len(blobs) * TRAIN_PERCENTILE) : int(len(blobs) * TRAIN_PERCENTILE) + int(len(blobs) * VALID_PERCENTILE)]
-    test = blobs[int(len(blobs) * TRAIN_PERCENTILE) + int(len(blobs) * VALID_PERCENTILE):]
+    train = arr[:int(len(arr) * TRAIN_PERCENTILE)]
+    valid = arr[int(len(arr) * TRAIN_PERCENTILE) : int(len(arr) * TRAIN_PERCENTILE) + int(len(arr) * VALID_PERCENTILE)]
+    test = arr[int(len(arr) * TRAIN_PERCENTILE) + int(len(arr) * VALID_PERCENTILE):]
 
-    print(f'total length: {len(blobs)}, train length: {len(train)}, valid length: {len(valid)}, test length: {len(test)}')
+    print(f'total length: {len(arr)}, train length: {len(train)}, valid length: {len(valid)}, test length: {len(test)}')
+
+    if len(arr) == 0:
+        print('your dataset is probably complicated to recognise or contains lots of noise')
 
     os.makedirs('dataset/train', exist_ok=True)
 
@@ -57,19 +59,18 @@ def saveObjects():
     saveInFolder(test, 'test')
 
 def detectObjects():
-    for classId, e in enumerate(datasets):
-        for index, blob in enumerate(blobs):
+    imagesAnnotations = []
+
+    for objectIndex, e in enumerate(datasets):
+        for index, blob in enumerate(e['Blobs']):
             net.setInput(cv2.dnn.blobFromImage(blob, 1/255.0, (416, 416), swapRB=True, crop=False))
 
             outs = net.forward(output_layers)
 
-            #reorganize the images array into a new array each contains the objects recognized in that image
-            #with the first index being the actual image data
-            blobs[index] = [
-                {
-                    'Image': blob
-                }
-            ]
+            t = {
+                'Image': blob,
+                'bbox': []              
+            }
 
             for out in outs:
                 for detection in out:
@@ -79,15 +80,17 @@ def detectObjects():
                     if class_id <= len(classes) and classes[class_id] == e['Type']:
                         confidence = scores[class_id]
                         if confidence > 0.8:
-                            blobs[index].append({
-                                'classId': classId,
+                            t['bbox'].append({
+                                'classId': objectIndex,
                                 'x': detection[0], 
                                 'y': detection[1],
                                 'w': detection[2], 
                                 'h': detection[3]
                             })
+            if len(t['bbox']) > 0:
+                imagesAnnotations.append(t)
 
-    saveObjects()
+    saveObjects(imagesAnnotations)
 
 def capture():
     while True:
@@ -116,7 +119,7 @@ def capture():
             T = input('Enter the Type for the new object: ')
             while not classes.__contains__(T) or len(T) < 0 or T == ' ' or T == '':
                 T = input('Enter the Type for the new object: ')
-                
+
             datasets.append({
                 'Name': N,
                 'Type': T,
