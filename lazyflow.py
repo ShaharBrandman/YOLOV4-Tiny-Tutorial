@@ -24,12 +24,12 @@ def saveInFolder(dataset, path):
     os.makedirs(f'dataset/{path}', exist_ok=True)
 
     for index, obj in enumerate(dataset):
-        cv2.imwrite(f'dataset/{path}/{path}-{index}.jpg', obj[0]['Image'])
-
-        if os.path.exists(f'dataset/{path}/{path}-{index}.txt'):
-            os.remove(f'dataset/{path}/{path}-{index}.txt')
-
         if len(obj) > 1:
+            cv2.imwrite(f'dataset/{path}/{path}-{index}.jpg', obj[0]['Image'])
+
+            if os.path.exists(f'dataset/{path}/{path}-{index}.txt'):
+                os.remove(f'dataset/{path}/{path}-{index}.txt')
+
             with open(f'dataset/{path}/{path}-{index}.txt', 'a') as f:
                 for j in range(1, len(obj)):
                     f.write(f"{obj[j]['classId']} {obj[j]['x']} {obj[j]['y']} {obj[j]['w']} {obj[j]['h']}\n")

@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-IMG_PATH = 'dataset/train/train-2'
+IMG_PATH = 'dataset/test/test-0'
 
 img = cv2.imread(f'{IMG_PATH}.jpg')
 
@@ -51,3 +51,4 @@ cv2.imshow("Review Annotations", cv2.resize(img, (800, 600)))
 while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         cv2.destroyAllWindows()
+        break
