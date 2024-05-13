@@ -1,3 +1,20 @@
+# General script installation guide
+
+## Windows
+`pip install -r requirements.txt` or `py -m pip install -r requirements.txt`
+
+# Linux / MacOS
+`pip install -r requirements.txt`
+
+# Lazyflow script installation guide
+* download yolov4-tiny weights from **[this link](https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights)**
+
+* download the configuration file for yolov4-tiny from **[that link](https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.cfg)**
+
+## using wget (optional)
+* `wget https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights -O yolov4-tiny.weights`
+* `wget https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.cfg -O yolov4.cfg`
+
 # Links
 
 ## Roboflow tutorial video

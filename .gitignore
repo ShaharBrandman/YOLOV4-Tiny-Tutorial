@@ -1,3 +1,2 @@
-*.names
 *.weights
-*.cfg
+dataset/
